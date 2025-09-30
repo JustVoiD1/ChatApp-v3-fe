@@ -13,26 +13,19 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
     const otherMessageStyle = `${baseMessageStyle} bg-muted text-foreground`;
     const myMessageStyle = `${baseMessageStyle} bg-primary text-primary-foreground ml-auto`;
     const wsRef = useRef<WebSocket | null>(null)
-    const [isTyping, setIsTyping] = useState(true)
     // const [user, setUser] = useState({
     //     fullname: 'Mainak',
     //     email: 'mew@example.com',
     //     username: 'mew'
     // });
+    const [messages, setMessages] = useState<message[]>([])
+    const [typers, setTypers] = useState<string[]>([])
+    const [typingTimeout, setTypingTimeout] = useState<any | null>(null)
 
-
-
-
-
-    const [messages, setMessages] = useState<message[]>([
-
-    ])
-
-
-
+    const [members, setMembers] = useState<string[]>([])
     const bottomRef = useRef<HTMLDivElement>(null)
-
     const inputMessageRef = useRef<HTMLInputElement>(null)
+
 
     const sendMessage = (text: string) => {
         // setMessages((prevMessages) => [...prevMessages, { sender: user.username, content: text, ts: new Date() }])
@@ -50,6 +43,90 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
         inputMessageRef.current?.focus()
     }, [])
 
+    // useEffect(() => {
+    //     const ws = new WebSocket("ws://localhost:8080");
+    //     wsRef.current = ws;
+
+    //     ws.onopen = () => {
+    //         console.log('WebSocket connected');
+    //         ws.send(JSON.stringify({
+    //             type: "join",
+    //             payload: {
+    //                 roomId: roomId,
+    //                 sender: user.username
+    //             }
+    //         }))
+    //     }
+
+    //     ws.onmessage = (event) => {
+    //         console.log('Received message:', event.data);
+
+    //         const parsedData = JSON.parse(event.data)
+
+    //         if (parsedData.type === 'memberslist') {
+    //             setMembers(parsedData.payload.members)
+    //         }
+    //         else if (parsedData.type === 'memberjoined') {
+    //             setMembers(parsedData.payload.members)
+    //             console.log(`${parsedData.payload.username} joined`)
+    //         }
+    //         else if (parsedData.type === 'leave') {
+    //             setMembers(parsedData.payload.members)
+    //             console.log(`${parsedData.payload.username} left the room`);
+    //         }
+    //         else if (parsedData.type === 'chat') {
+    //             setMessages(m => [
+    //                 ...m,
+    //                 {
+    //                     content: parsedData.payload.message,
+    //                     sender: parsedData.payload.sender,
+    //                     ts: new Date()
+    //                 }
+    //             ]);
+    //         }
+    //         else if (parsedData.type === 'typing') {
+    //             const { sender, typing } = parsedData.payload;
+    //             if (sender !== user.username) {
+    //                 if (typing) {
+
+    //                     setTypers(prev => prev.includes(sender) ? prev : [...prev, sender])
+    //                 }
+
+    //                 else {
+    //                     setTypers(prev => prev.filter(typer => typer !== sender))
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     ws.onclose = () => {
+    //         console.log('WebSocket disconnected');
+    //     }
+
+    //     // CLEANUP FUNCTION - This is crucial!
+    //     return () => {
+    //         console.log('Cleaning up WebSocket connection');
+    //         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    //             wsRef.current.send(JSON.stringify({
+    //                 type: "leave",
+    //                 payload: {
+    //                     roomId: roomId,
+    //                     sender: user.username
+    //                 }
+    //             }));
+    //         }
+    //         if (typingTimeout) {
+    //             clearTimeout(typingTimeout)
+    //         }
+    //         ws.close();
+    //         wsRef.current = null;
+    //     }
+
+    // }, [roomId]) 
+
+
+    // Keep roomId as dependency but add cleanup
+
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080");
         wsRef.current = ws;
@@ -59,18 +136,37 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
             ws.send(JSON.stringify({
                 type: "join",
                 payload: {
-                    roomId: roomId
+                    roomId: roomId,
+                    sender: user.username
                 }
             }))
         }
 
         ws.onmessage = (event) => {
-            setIsTyping(true)
             console.log('Received message:', event.data);
 
             const parsedData = JSON.parse(event.data)
 
-            if (parsedData.type === 'chat') {
+            if (parsedData.type === 'memberslist') {
+                if (parsedData.payload && Array.isArray(parsedData.payload.members)) {
+                    setMembers(parsedData.payload.members);
+                }
+            }
+            else if (parsedData.type === 'memberjoined') {
+                if (parsedData.payload && Array.isArray(parsedData.payload.members)) {
+                    setMembers(parsedData.payload.members);
+                }
+                const username = parsedData.payload?.username || 'Someone';
+                console.log(`${username} joined`);
+            }
+            else if (parsedData.type === 'leave') {
+                if (parsedData.payload && Array.isArray(parsedData.payload.members)) {
+                    setMembers(parsedData.payload.members);
+                }
+                const username = parsedData.payload?.username || 'Someone';
+                console.log(`${username} left the room`);
+            }
+            else if (parsedData.type === 'chat') {
                 setMessages(m => [
                     ...m,
                     {
@@ -80,31 +176,120 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
                     }
                 ]);
             }
-        }
+            else if (parsedData.type === 'typing') {
+                const { sender, typing } = parsedData.payload;
+                if (sender !== user.username) {
+                    if (typing) {
 
+                        setTypers(prev => prev.includes(sender) ? prev : [...prev, sender])
+                    }
+
+                    else {
+                        setTypers(prev => prev.filter(typer => typer !== sender))
+                    }
+                }
+            }
+        }
         ws.onclose = () => {
             console.log('WebSocket disconnected');
         }
 
+        const handleBeforeUnload = () => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                    type: "leave",
+                    payload: {
+                        roomId: roomId,
+                        sender: user.username
+                    }
+                }));
+            }
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        
         // CLEANUP FUNCTION - This is crucial!
         return () => {
             console.log('Cleaning up WebSocket connection');
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                    type: "leave",
+                    payload: {
+                        roomId: roomId,
+                        sender: user.username
+                    }
+                }));
+            }
+            if (typingTimeout) {
+                clearTimeout(typingTimeout)
+            }
+            window.removeEventListener('beforeunload', handleBeforeUnload);
             ws.close();
             wsRef.current = null;
         }
 
-    }, [roomId]) // Keep roomId as dependency but add cleanup
-
+    }, [roomId, user.username])
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // useEffect(() => {
+    // if (inputMessageRef.current?.value !== '') {
+    //     console.log('Input Changed: ', inputMessageRef.current?.value)
+    //     wsRef.current?.send(JSON.stringify({
+    //         type: "typing",
+    //         payload: {
+    //             roomId: roomId,
+    //             sender: user.username
+    //         }
+    //     }))
+
+    // }
+    // 
+    // }, [inputMessageRef.current?.value])
+
+    const handleChange = () => {
+        if (typingTimeout) {
+            clearTimeout(typingTimeout)
+        }
+        wsRef.current?.send(JSON.stringify({
+            type: "typing",
+            payload: {
+                typing: true,
+                roomId: roomId,
+                sender: user.username
+            }
+        }))
+        const clock = setTimeout(() => {
+            wsRef.current?.send(JSON.stringify({
+                type: 'typing',
+                payload: {
+                    typing: false,
+                    roomId: roomId,
+                    sender: user.username
+                }
+            }))
+        }, 2000)
+        setTypingTimeout(clock);
+    }
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault()
         const message = inputMessageRef.current?.value
         console.log(message)
+        if (typingTimeout) {
+            clearTimeout(typingTimeout)
+            setTypingTimeout(null)
+        }
+        wsRef.current?.send(JSON.stringify({
+            type: "typing",
+            payload: {
+                typing: false,
+                roomId: roomId,
+                sender: user.username
+            }
+        }))
         sendMessage(message || '')
         if (inputMessageRef.current) {
             inputMessageRef.current.value = ''
@@ -137,7 +322,20 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
                         </span>
                         <div className="flex flex-col gap-0.5">
                             <p className="text-sm leading-none font-medium">Room: {roomId}</p>
-                            <p className="text-muted-foreground text-xs"><span className="font-semibold">Someone</span> is typing...</p>
+                            <p className="text-muted-foreground text-xs"><span className="font-semibold">{members.length}</span> members</p>
+                            {(typers?.length || 0) > 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                    <span className="font-semibold">
+                                        {typers.length === 1
+                                            ? typers[0]
+                                            : typers.length === 2
+                                                ? `${typers[0]} and ${typers[1]}`
+                                                : `${typers[0]} and ${typers.length - 1} others`
+                                        }
+                                    </span>
+                                    {typers.length === 1 ? ' is' : ' are'} typing...
+                                </p>
+                            )}
 
 
                         </div>
@@ -193,6 +391,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
                             placeholder="Type your message..."
                             autoComplete="off"
                             required
+                            onChange={handleChange}
                         />
                         <button
                             data-slot="button"
