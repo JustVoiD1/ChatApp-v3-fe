@@ -7,6 +7,7 @@ export interface message {
     ts: Date
 }
 
+
 const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: string, user: User }) => {
 
     const baseMessageStyle = "relative w-max max-w-[75%] px-3 py-2 text-sm rounded-lg flex bg-muted text-muted-foreground";
@@ -20,7 +21,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
     // });
     const [messages, setMessages] = useState<message[]>([])
     const [typers, setTypers] = useState<string[]>([])
-    const [typingTimeout, setTypingTimeout] = useState<any | null>(null)
+    const [typingTimeout, setTypingTimeout] = useState<number | null>(null)
 
     const [members, setMembers] = useState<string[]>([])
     const bottomRef = useRef<HTMLDivElement>(null)
@@ -303,7 +304,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
             >
                 <div
                     data-slot="card-header"
-                    className="@container/card-header auto-rows-min grid-rows-[auto_auto] gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 flex flex-row  justify-between items-center"
+                    className="@container/card-header auto-rows-min grid-rows-[auto_auto] gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 flex flex-row border-b border-neutral-300 justify-between items-center"
                 >
                     <div className="flex items-center justify-center gap-4">
                         <span
