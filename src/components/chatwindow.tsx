@@ -127,7 +127,18 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
 
 
     // Keep roomId as dependency but add cleanup
-
+    const handleLogout = () => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                    type: "leave",
+                    payload: {
+                        roomId: roomId,
+                        sender: user.username
+                    }
+                }));
+            }
+            window.location.href='/login'
+        };
     useEffect(() => {
         const ws = new WebSocket("ws://localhost:8080");
         wsRef.current = ws;
@@ -195,20 +206,10 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
             console.log('WebSocket disconnected');
         }
 
-        const handleBeforeUnload = () => {
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({
-                    type: "leave",
-                    payload: {
-                        roomId: roomId,
-                        sender: user.username
-                    }
-                }));
-            }
-        };
         
-        window.addEventListener('beforeunload', handleBeforeUnload)
-        
+
+        window.addEventListener('beforeunload', handleLogout)
+
         // CLEANUP FUNCTION - This is crucial!
         return () => {
             console.log('Cleaning up WebSocket connection');
@@ -224,7 +225,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
             if (typingTimeout) {
                 clearTimeout(typingTimeout)
             }
-            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('beforeunload', handleLogout);
             ws.close();
             wsRef.current = null;
         }
@@ -304,7 +305,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
             >
                 <div
                     data-slot="card-header"
-                    className="@container/card-header auto-rows-min grid-rows-[auto_auto] gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6 flex flex-row border-b border-neutral-300 justify-between items-center"
+                    className="@container/card-header auto-rows-min grid-rows-[auto_auto] gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-2 flex flex-row border-b border-neutral-300 justify-between items-center"
                 >
                     <div className="flex items-center justify-center gap-4">
                         <span
@@ -341,30 +342,14 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
 
                         </div>
                     </div>
-                    <div className="w-fit flex items-center justify-around gap-2 text-wrap">
+                    <div className="w-fit flex flex-col items-center justify-around gap-2 text-wrap">
                         <span className="text-muted-foreground text-sm">signed in as <span className="font-bold">{user.username}</span></span>
-                        {/* <button
-                        data-slot="tooltip-trigger"
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([className*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-secondary text-secondary-foreground hover:bg-secondary/80 ml-auto size-8 rounded-full"
-                        data-state="closed"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-plus"
-                        >
-                            <path d="M5 12h14"></path>
-                            <path d="M12 5v14"></path>
-                        </svg>
-                        <span className="sr-only">New message</span>
-                    </button> */}
+                        <div className="w-full flex flex-row justify-end">
+                            <button className="cursor-pointer bg-destructive text-sm px-2 py-1 rounded-xl text-destructive-foreground"
+                                onClick={handleLogout}
+                            >Logout</button>
+
+                        </div>
                     </div>
                 </div>
 
@@ -386,7 +371,7 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
                     <form className="relative w-full" onSubmit={handleSubmit}>
                         <input
                             data-slot="input"
-                            className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex-1 pr-10"
+                            className="file:text-foreground bg-neutral-200/50 placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border  px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex-1 pr-10"
                             id="message"
                             ref={inputMessageRef}
                             placeholder="Type your message..."
