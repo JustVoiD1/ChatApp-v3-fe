@@ -1,49 +1,59 @@
-import { useState } from 'react';
 import './App.css';
+import { Routes, Route, Navigate} from 'react-router-dom'
+import SigninPage from './components/Signin';
+import SignupPage from './components/Signup';
+import HomePage from './components/Home';
 import ChatWindow from './components/chatwindow';
-import { LoginPage } from './components/login-page';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom';
 
 export type User = {
-  fullname: string,
-  email: string,
   username: string
 }
-function App() {
-  const [user, setUser] = useState<User | null>(null)
-  const [roomId, setRoomId] = useState<string | null>(null)
-  return (
 
+function ChatRoute() {
+  const location = useLocation()
+  const roomId = location.state?.roomId
+  const user = location.state?.user
+  
+  if (!localStorage.getItem("token") || !roomId || !user) {
+    return <Navigate to="/signin" replace />
+  }
+  return <ChatWindow roomId={roomId} user={user}/>
+}
+
+function App() {
+  return (
     <div className="h-screen flex items-center justify-center bg-background">
-      <Router>
         <Routes>
           <Route
-            path="/login"
+            path="/signup"
             element={
-              <LoginPage 
-                setRoomId={setRoomId}
-                roomId={roomId}
-                setUser={setUser}
-                user={user}/>
+              < SignupPage />
+            }
+          />
+          <Route
+            path="/signin"
+            element={
+              <SigninPage />
+            }
+          />
+          <Route
+            path="/home"
+            element={ 
+              // auth.user ? 
+            <HomePage /> 
+            // : <Navigate to="/signin" replace/>
             }
           />
           <Route
             path="/chat"
-            element={
-              roomId && user ? (
-                <ChatWindow roomId={roomId} user={user} />
-              ) : (
-                // If not logged in, redirect to login
-                <Navigate to="/login" replace />
-              )
-            }
+            element={<ChatRoute />}
           />
           <Route
             path="/"
-            element={<Navigate to={roomId && user ? "/chat" : "/login"} replace />}
+            element={<Navigate to={"/signin"} replace />}
           />
         </Routes>
-      </Router>
     </div>
   );
 }

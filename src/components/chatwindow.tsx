@@ -1,6 +1,7 @@
 import type { User } from "@/App";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import MessageBubble from "./chatbubble";
+import { useNavigate } from "react-router-dom";
 export interface message {
     sender: string,
     content: string,
@@ -9,7 +10,9 @@ export interface message {
 
 
 const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: string, user: User }) => {
-
+    const nav = useNavigate()
+    const token = localStorage.getItem("token")
+    
     const baseMessageStyle = "relative w-max max-w-[75%] px-3 py-2 text-sm rounded-lg flex bg-muted text-muted-foreground";
     const otherMessageStyle = `${baseMessageStyle} bg-muted text-foreground`;
     const myMessageStyle = `${baseMessageStyle} bg-primary text-primary-foreground ml-auto`;
@@ -137,10 +140,10 @@ const ChatWindow = ({ className, roomId, user }: { className?: string, roomId: s
                     }
                 }));
             }
-            window.location.href='/login'
+            nav('/signin')
         };
     useEffect(() => {
-        const ws = new WebSocket("ws://localhost:8080");
+        const ws = new WebSocket(`ws://localhost:8080?token=${token}`);
         wsRef.current = ws;
 
         ws.onopen = () => {
